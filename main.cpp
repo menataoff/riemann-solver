@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include "output.hpp"
 #include "pressure_solver.hpp"
+#include "star_state.hpp"
 
 #include <exception>
 #include <iostream>
@@ -20,6 +21,10 @@ int main(int argc, char* argv[]) {
         out << "p_star=" << pressure.pressure << ", guess=" << pressure.initial_pressure
             << " (" << guess_method_name(pressure.guess_method) << ")"
             << ", Newton iterations=" << pressure.iterations << '\n';
+        const StarState star = calculate_star_state(config.left, config.right,
+                                                    config.gamma, pressure.pressure);
+        out << "u_star=" << star.u << ", rho_star_left=" << star.rho_left
+            << ", rho_star_right=" << star.rho_right << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';

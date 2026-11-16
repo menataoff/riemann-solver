@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(prac15_config src/config.cpp src/output.cpp)
 target_include_directories(prac15_config PUBLIC include)
 
-add_library(prac15_riemann src/wave_function.cpp src/pressure_solver.cpp)
+add_library(prac15_riemann src/wave_function.cpp src/pressure_solver.cpp src/star_state.cpp)
 target_include_directories(prac15_riemann PUBLIC include)
 
 add_executable(prac15 main.cpp)
