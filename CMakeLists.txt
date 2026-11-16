@@ -17,6 +17,8 @@ add_library(prac15_riemann
     src/face_flux.cpp
     src/vacuum.cpp
     src/exact_riemann_solver.cpp
+    src/exact_flux_solver.cpp
+    src/solver_factory.cpp
 )
 target_include_directories(prac15_riemann PUBLIC include)
 

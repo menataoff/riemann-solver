@@ -3,6 +3,7 @@
 #include <cmath>
 #include <fstream>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -103,6 +104,8 @@ Config load_config(const std::string& file_name) {
 
     Config config;
     config.gamma = number(values, "gas.gamma");
+    config.solver_name = required(values, "method.solver");
+    config.scheme_name = required(values, "method.scheme");
     config.x_min = number(values, "domain.x_min");
     config.x_max = number(values, "domain.x_max");
     config.discontinuity = number(values, "domain.discontinuity");
@@ -116,6 +119,8 @@ Config load_config(const std::string& file_name) {
     config.sample_time = number(values, "output.sample_time");
 
     if (config.gamma <= 1.0) throw std::runtime_error("gas.gamma must be greater than 1");
+    if (config.solver_name != "exact") throw std::runtime_error("method.solver: only exact is available");
+    if (config.scheme_name != "none") throw std::runtime_error("method.scheme: only none is available in part 1");
     if (!(config.x_min < config.discontinuity && config.discontinuity < config.x_max)) {
         throw std::runtime_error("domain.discontinuity must lie inside the domain");
     }
@@ -125,6 +130,20 @@ Config load_config(const std::string& file_name) {
     if (config.sample_time <= 0.0) throw std::runtime_error("output.sample_time must be positive");
     if (config.output_destination != "console" && config.output_destination != "file") {
         throw std::runtime_error("output.destination must be console or file");
+    }
+    const std::set<std::string> known_keys{
+        "gas.gamma", "method.solver", "method.scheme",
+        "domain.x_min", "domain.x_max", "domain.discontinuity",
+        "initial.left.rho", "initial.left.u", "initial.left.p",
+        "initial.right.rho", "initial.right.u", "initial.right.p",
+        "boundary.left.type", "boundary.left.rho", "boundary.left.u", "boundary.left.p",
+        "boundary.right.type", "boundary.right.rho", "boundary.right.u", "boundary.right.p",
+        "output.destination", "output.file", "output.sample_x", "output.sample_time"
+    };
+    for (const auto& entry : values) {
+        if (known_keys.count(entry.first) == 0) {
+            throw std::runtime_error("Unknown config key: " + entry.first);
+        }
     }
     return config;
 }

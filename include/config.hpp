@@ -11,6 +11,8 @@ struct BoundaryCondition {
 
 struct Config {
     double gamma = 1.4;
+    std::string solver_name = "exact";
+    std::string scheme_name = "none";
     double x_min = 0.0;
     double x_max = 1.0;
     double discontinuity = 0.5;

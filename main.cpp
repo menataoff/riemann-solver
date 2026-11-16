@@ -3,6 +3,7 @@
 #include "exact_riemann_solver.hpp"
 #include "sample_solution.hpp"
 #include "face_flux.hpp"
+#include "solver_factory.hpp"
 
 #include <exception>
 #include <iostream>
@@ -53,10 +54,12 @@ int main(int argc, char* argv[]) {
             << ", p=" << sample.p << '\n';
         const FaceResult face = calculate_face_flux(config.left, config.right, config.gamma,
                                                     star, waves);
+        const auto solver = make_solver(config.solver_name);
+        const Flux scheme_flux = solver->solve_flux(config.left, config.right, config.gamma);
         out << "face at S=0: rho=" << face.state.rho << ", u=" << face.state.u
             << ", p=" << face.state.p << '\n';
-        out << "flux: mass=" << face.flux.mass << ", momentum=" << face.flux.momentum
-            << ", energy=" << face.flux.energy << '\n';
+        out << "flux: mass=" << scheme_flux.mass << ", momentum=" << scheme_flux.momentum
+            << ", energy=" << scheme_flux.energy << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
