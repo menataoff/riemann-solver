@@ -11,7 +11,7 @@ target_include_directories(prac15_config PUBLIC include)
 add_library(prac15_toro src/toro_cases.cpp)
 target_include_directories(prac15_toro PUBLIC include)
 
-add_library(prac15_export src/export_case.cpp src/profile_export.cpp src/xt_export.cpp)
+add_library(prac15_export src/export_case.cpp src/profile_export.cpp src/xt_export.cpp src/pu_export.cpp)
 target_include_directories(prac15_export PUBLIC include)
 target_link_libraries(prac15_export PUBLIC prac15_config prac15_riemann)
 
