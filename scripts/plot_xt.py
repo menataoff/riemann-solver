@@ -1,4 +1,4 @@
-"""Build x-t density diagrams from CSV files written by export_toro."""
+"""Строит диаграммы плотности на плоскости x–t по сохранённым CSV."""
 
 from pathlib import Path
 import argparse
@@ -41,23 +41,26 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int | str) -> None:
 
     figure, axis = plt.subplots(figsize=(10, 7))
     mesh = axis.pcolormesh(x, times, rho, shading="auto", cmap="viridis")
-    figure.colorbar(mesh, ax=axis, label="Density ρ")
+    figure.colorbar(mesh, ax=axis, label="Плотность ρ")
 
-    for side, color in (("left", "tab:red"), ("right", "tab:orange")):
+    for side, wave_name, fan_name, color in (
+        ("left", "Левая", "левого", "tab:red"),
+        ("right", "Правая", "правого", "tab:orange"),
+    ):
         if metadata[f"{side}_type"] == "shock":
             draw_wave(axis, x0, times, float(metadata[f"{side}_speed"]),
-                      color, "-", f"{side} shock")
+                      color, "-", f"{wave_name} ударная волна")
         else:
             head = float(metadata[f"{side}_head"])
             tail = float(metadata[f"{side}_tail"])
-            draw_wave(axis, x0, times, head, color, "-", f"{side} fan head")
-            draw_wave(axis, x0, times, tail, color, "-", f"{side} fan tail")
+            draw_wave(axis, x0, times, head, color, "-", f"Голова {fan_name} веера")
+            draw_wave(axis, x0, times, tail, color, "-", f"Хвост {fan_name} веера")
             for speed in np.linspace(head, tail, 7)[1:-1]:
                 draw_wave(axis, x0, times, float(speed), color, ":", "_nolegend_")
 
-    draw_wave(axis, x0, times, contact, "white", "--", "contact")
+    draw_wave(axis, x0, times, contact, "white", "--", "Контактный разрыв")
 
-    # Region labels are placed between wave boundaries at 70% of the final time.
+    # Обозначения областей ставятся между волнами при 70 % конечного времени.
     label_time = 0.7 * t_out
     left_head, left_tail = wave_boundaries(metadata, "left")
     right_head, right_tail = wave_boundaries(metadata, "right")
@@ -76,10 +79,10 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int | str) -> None:
                       color="white", fontsize=10, fontweight="bold",
                       bbox={"facecolor": "black", "alpha": 0.45, "pad": 2})
 
-    case_title = f"Toro test {number}" if isinstance(number, int) else f"Case {number}"
+    case_title = f"Тест Торо {number}" if isinstance(number, int) else f"Задача {number}"
     file_stem = f"toro_{number}" if isinstance(number, int) else number
     axis.set(xlim=(x_min, x_max), ylim=(0, t_out), xlabel="x", ylabel="t",
-             title=f"{case_title}: x-t density diagram")
+             title=f"{case_title}: плотность на плоскости x–t")
     axis.legend(loc="upper right", fontsize=8)
     figure.tight_layout()
     figure_dir.mkdir(parents=True, exist_ok=True)
@@ -94,7 +97,7 @@ def main() -> None:
     args = parser.parse_args()
     for number in range(1, 6):
         plot_case(args.data_dir / f"toro_{number}", args.figure_dir, number)
-        print(f"Saved Toro {number} x-t diagram")
+        print(f"Сохранена диаграмма x–t теста Торо {number}")
 
 
 if __name__ == "__main__":

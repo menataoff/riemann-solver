@@ -1,4 +1,4 @@
-"""Build all figures for the five Toro cases from exported CSV files."""
+"""Строит все рисунки для пяти тестов Торо по сохранённым CSV."""
 
 from pathlib import Path
 import argparse
@@ -18,7 +18,7 @@ def main() -> None:
         plot_profiles(case_dir, args.figure_dir, number)
         plot_xt(case_dir, args.figure_dir, number)
         plot_pu(case_dir, args.figure_dir, number)
-        print(f"Saved all figures for Toro {number}")
+        print(f"Сохранены все рисунки теста Торо {number}")
 
 
 if __name__ == "__main__":

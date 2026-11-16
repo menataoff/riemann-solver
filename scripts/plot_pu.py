@@ -1,4 +1,4 @@
-"""Build p-u wave-curve diagrams from CSV files written by export_toro."""
+"""Строит волновые кривые на плоскости p–u по сохранённым CSV."""
 
 from pathlib import Path
 import argparse
@@ -23,25 +23,26 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int | str,
     pressure = curves["p"]
 
     figure, axis = plt.subplots(figsize=(9, 7))
-    for side, color in (("left", "tab:blue"), ("right", "tab:red")):
+    for side, name, color in (("left", "Левая", "tab:blue"),
+                              ("right", "Правая", "tab:red")):
         initial_p = float(metadata[f"{side}_p"])
         velocity = curves[f"u_{side}"]
         rarefaction = pressure <= initial_p
         shock = pressure >= initial_p
         axis.plot(velocity[rarefaction], pressure[rarefaction], color=color,
-                  linestyle="--", linewidth=1.8, label=f"{side} rarefaction")
+                  linestyle="--", linewidth=1.8, label=f"{name} волна разрежения")
         axis.plot(velocity[shock], pressure[shock], color=color,
-                  linestyle="-", linewidth=1.8, label=f"{side} shock")
+                  linestyle="-", linewidth=1.8, label=f"{name} ударная ветвь")
         axis.scatter([float(metadata[f"{side}_u"])], [initial_p], color=color,
                      s=55, zorder=4)
-        axis.annotate("L" if side == "left" else "R",
+        axis.annotate("Л" if side == "left" else "П",
                       (float(metadata[f"{side}_u"]), initial_p),
                       xytext=(5, 5), textcoords="offset points")
 
     u_star = float(metadata["u_star"])
     p_star = float(metadata["p_star"])
     axis.scatter([u_star], [p_star], color="black", marker="*", s=150,
-                 zorder=5, label="(u*, p*)")
+                 zorder=5, label="Точка пересечения (u*, p*)")
     axis.annotate("*", (u_star, p_star), xytext=(7, 6), textcoords="offset points")
     if log_pressure is None:
         if isinstance(number, int):
@@ -51,10 +52,10 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int | str,
             log_pressure = max(pressures) / min(pressures) >= 1000
     if log_pressure:
         axis.set_yscale("log")
-    case_title = f"Toro test {number}" if isinstance(number, int) else f"Case {number}"
+    case_title = f"Тест Торо {number}" if isinstance(number, int) else f"Задача {number}"
     file_stem = f"toro_{number}" if isinstance(number, int) else number
-    axis.set(xlabel="Velocity u", ylabel="Pressure p",
-             title=f"{case_title}: wave curves in the p-u plane")
+    axis.set(xlabel="Скорость u", ylabel="Давление p",
+             title=f"{case_title}: волновые кривые на плоскости p–u")
     axis.grid(alpha=0.2, which="both")
     axis.legend(loc="best", fontsize=9)
     figure.tight_layout()
@@ -70,7 +71,7 @@ def main() -> None:
     args = parser.parse_args()
     for number in range(1, 6):
         plot_case(args.data_dir / f"toro_{number}", args.figure_dir, number)
-        print(f"Saved Toro {number} p-u diagram")
+        print(f"Сохранена диаграмма p–u теста Торо {number}")
 
 
 if __name__ == "__main__":
