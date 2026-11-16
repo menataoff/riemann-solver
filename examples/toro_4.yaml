@@ -1,0 +1,28 @@
+gas:
+  gamma: 1.4
+method:
+  solver: exact
+  scheme: none
+domain:
+  x_min: 0.0
+  x_max: 1.0
+  discontinuity: 0.5
+initial:
+  left:
+    rho: 1.0
+    u: 0.0
+    p: 0.01
+  right:
+    rho: 1.0
+    u: 0.0
+    p: 100.0
+boundary:
+  left:
+    type: transmissive
+  right:
+    type: transmissive
+output:
+  destination: console
+  file: output/toro_4.log
+  sample_x: 0.5
+  sample_time: 0.035
