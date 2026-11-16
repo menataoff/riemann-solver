@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include "output.hpp"
+#include "pressure_solver.hpp"
 
 #include <exception>
 #include <iostream>
@@ -15,6 +16,10 @@ int main(int argc, char* argv[]) {
             << ", p=" << config.left.p << '\n';
         out << "right: rho=" << config.right.rho << ", u=" << config.right.u
             << ", p=" << config.right.p << '\n';
+        const PressureResult pressure = solve_pressure(config.left, config.right, config.gamma);
+        out << "p_star=" << pressure.pressure << ", guess=" << pressure.initial_pressure
+            << " (" << guess_method_name(pressure.guess_method) << ")"
+            << ", Newton iterations=" << pressure.iterations << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
