@@ -1,8 +1,6 @@
 #include "config.hpp"
 #include "output.hpp"
-#include "pressure_solver.hpp"
-#include "star_state.hpp"
-#include "wave_speeds.hpp"
+#include "exact_riemann_solver.hpp"
 #include "sample_solution.hpp"
 #include "face_flux.hpp"
 
@@ -20,15 +18,23 @@ int main(int argc, char* argv[]) {
             << ", p=" << config.left.p << '\n';
         out << "right: rho=" << config.right.rho << ", u=" << config.right.u
             << ", p=" << config.right.p << '\n';
-        const PressureResult pressure = solve_pressure(config.left, config.right, config.gamma);
+        const RiemannResult result = solve_riemann(config.left, config.right, config.gamma);
+        if (result.vacuum.occurs) {
+            out << "Vacuum occurs: u_right - u_left=" << result.vacuum.velocity_difference
+                << " >= limit=" << result.vacuum.limit << '\n';
+            out << "Solution with vacuum is not required for this assignment.\n";
+            return 0;
+        }
+
+        const RiemannSolution& solution = *result.solution;
+        const PressureResult& pressure = solution.pressure;
         out << "p_star=" << pressure.pressure << ", guess=" << pressure.initial_pressure
             << " (" << guess_method_name(pressure.guess_method) << ")"
             << ", Newton iterations=" << pressure.iterations << '\n';
-        const StarState star = calculate_star_state(config.left, config.right,
-                                                    config.gamma, pressure.pressure);
+        const StarState& star = solution.star;
         out << "u_star=" << star.u << ", rho_star_left=" << star.rho_left
             << ", rho_star_right=" << star.rho_right << '\n';
-        const WavePair waves = calculate_wave_speeds(config.left, config.right, config.gamma, star);
+        const WavePair& waves = solution.waves;
         auto print_wave = [&out](const char* side, const WaveInfo& wave) {
             out << side << " wave: " << wave_type_name(wave.type);
             if (wave.type == WaveType::Shock) {
