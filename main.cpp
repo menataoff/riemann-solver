@@ -2,6 +2,7 @@
 #include "output.hpp"
 #include "pressure_solver.hpp"
 #include "star_state.hpp"
+#include "wave_speeds.hpp"
 
 #include <exception>
 #include <iostream>
@@ -25,6 +26,18 @@ int main(int argc, char* argv[]) {
                                                     config.gamma, pressure.pressure);
         out << "u_star=" << star.u << ", rho_star_left=" << star.rho_left
             << ", rho_star_right=" << star.rho_right << '\n';
+        const WavePair waves = calculate_wave_speeds(config.left, config.right, config.gamma, star);
+        auto print_wave = [&out](const char* side, const WaveInfo& wave) {
+            out << side << " wave: " << wave_type_name(wave.type);
+            if (wave.type == WaveType::Shock) {
+                out << ", speed=" << wave.speed;
+            } else {
+                out << ", head=" << wave.head_speed << ", tail=" << wave.tail_speed;
+            }
+            out << '\n';
+        };
+        print_wave("left", waves.left);
+        print_wave("right", waves.right);
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
