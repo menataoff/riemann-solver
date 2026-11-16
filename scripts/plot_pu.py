@@ -16,7 +16,8 @@ def read_metadata(path: Path) -> dict[str, str]:
         return {row["key"]: row["value"] for row in csv.DictReader(file)}
 
 
-def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
+def plot_case(case_dir: Path, figure_dir: Path, number: int | str,
+              log_pressure: bool | None = None) -> None:
     metadata = read_metadata(case_dir / "metadata.csv")
     curves = np.genfromtxt(case_dir / "pu_curves.csv", delimiter=",", names=True)
     pressure = curves["p"]
@@ -42,15 +43,23 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
     axis.scatter([u_star], [p_star], color="black", marker="*", s=150,
                  zorder=5, label="(u*, p*)")
     axis.annotate("*", (u_star, p_star), xytext=(7, 6), textcoords="offset points")
-    if number >= 3:
+    if log_pressure is None:
+        if isinstance(number, int):
+            log_pressure = number >= 3
+        else:
+            pressures = [float(metadata["left_p"]), float(metadata["right_p"]), p_star]
+            log_pressure = max(pressures) / min(pressures) >= 1000
+    if log_pressure:
         axis.set_yscale("log")
+    case_title = f"Toro test {number}" if isinstance(number, int) else f"Case {number}"
+    file_stem = f"toro_{number}" if isinstance(number, int) else number
     axis.set(xlabel="Velocity u", ylabel="Pressure p",
-             title=f"Toro test {number}: wave curves in the p-u plane")
+             title=f"{case_title}: wave curves in the p-u plane")
     axis.grid(alpha=0.2, which="both")
     axis.legend(loc="best", fontsize=9)
     figure.tight_layout()
     figure_dir.mkdir(parents=True, exist_ok=True)
-    figure.savefig(figure_dir / f"toro_{number}_pu.png", dpi=180)
+    figure.savefig(figure_dir / f"{file_stem}_pu.png", dpi=180)
     plt.close(figure)
 
 

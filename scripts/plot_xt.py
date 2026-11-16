@@ -29,7 +29,7 @@ def wave_boundaries(metadata: dict[str, str], side: str) -> tuple[float, float]:
     return float(metadata[f"{side}_head"]), float(metadata[f"{side}_tail"])
 
 
-def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
+def plot_case(case_dir: Path, figure_dir: Path, number: int | str) -> None:
     metadata = read_metadata(case_dir / "metadata.csv")
     raw = np.genfromtxt(case_dir / "xt_density.csv", delimiter=",", names=True)
     x = np.unique(raw["x"])
@@ -76,12 +76,14 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
                       color="white", fontsize=10, fontweight="bold",
                       bbox={"facecolor": "black", "alpha": 0.45, "pad": 2})
 
+    case_title = f"Toro test {number}" if isinstance(number, int) else f"Case {number}"
+    file_stem = f"toro_{number}" if isinstance(number, int) else number
     axis.set(xlim=(x_min, x_max), ylim=(0, t_out), xlabel="x", ylabel="t",
-             title=f"Toro test {number}: x-t density diagram")
+             title=f"{case_title}: x-t density diagram")
     axis.legend(loc="upper right", fontsize=8)
     figure.tight_layout()
     figure_dir.mkdir(parents=True, exist_ok=True)
-    figure.savefig(figure_dir / f"toro_{number}_xt.png", dpi=180)
+    figure.savefig(figure_dir / f"{file_stem}_xt.png", dpi=180)
     plt.close(figure)
 
 

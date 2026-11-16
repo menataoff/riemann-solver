@@ -33,7 +33,7 @@ def wave_lines(metadata: dict[str, str]) -> list[tuple[float, str, str]]:
     return result
 
 
-def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
+def plot_case(case_dir: Path, figure_dir: Path, number: int | str) -> None:
     metadata = read_metadata(case_dir / "metadata.csv")
     data = np.genfromtxt(case_dir / "profile.csv", delimiter=",", names=True)
     fields = (
@@ -56,10 +56,12 @@ def plot_case(case_dir: Path, figure_dir: Path, number: int) -> None:
     axes[0, 0].legend(loc="best", fontsize=8)
     for axis in axes[-1, :]:
         axis.set_xlabel("x")
-    figure.suptitle(f"Toro test {number}: exact profiles at t = {float(metadata['t_out']):g}")
+    case_title = f"Toro test {number}" if isinstance(number, int) else f"Case {number}"
+    file_stem = f"toro_{number}" if isinstance(number, int) else number
+    figure.suptitle(f"{case_title}: exact profiles at t = {float(metadata['t_out']):g}")
     figure.tight_layout()
     figure_dir.mkdir(parents=True, exist_ok=True)
-    figure.savefig(figure_dir / f"toro_{number}_profiles.png", dpi=180)
+    figure.savefig(figure_dir / f"{file_stem}_profiles.png", dpi=180)
     plt.close(figure)
 
 

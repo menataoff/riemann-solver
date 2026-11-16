@@ -40,6 +40,9 @@ add_test(NAME toro_tests COMMAND toro_tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR
 add_executable(export_toro tools/export_toro.cpp)
 target_link_libraries(export_toro PRIVATE prac15_toro prac15_export)
 
+add_executable(export_case tools/export_case.cpp)
+target_link_libraries(export_case PRIVATE prac15_export)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(prac15_config PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(prac15_riemann PRIVATE -Wall -Wextra -Wpedantic)
@@ -48,4 +51,5 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(prac15 PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(toro_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(export_toro PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(export_case PRIVATE -Wall -Wextra -Wpedantic)
 endif()
