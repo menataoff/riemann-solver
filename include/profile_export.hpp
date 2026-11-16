@@ -1,0 +1,9 @@
+#pragma once
+
+#include "config.hpp"
+#include "exact_riemann_solver.hpp"
+
+#include <filesystem>
+
+void write_profile_csv(const std::filesystem::path& directory, const Config& config,
+                       const RiemannSolution& solution, int point_count);
