@@ -3,11 +3,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace {
 
-constexpr double min_pressure = 1e-12;
 constexpr double tolerance = 1e-6;
 constexpr int max_iterations = 100;
 
@@ -37,14 +37,16 @@ PressureResult initial_guess(const PrimitiveState& left, const PrimitiveState& r
         result.initial_pressure = std::pow(numerator / denominator, 1.0 / exponent);
         result.guess_method = GuessMethod::TwoRarefactions;
     } else {
-        const double reference = std::max(p_linear, min_pressure);
+        const double reference = std::max(p_linear, std::numeric_limits<double>::min());
         const double mass_left = std::sqrt(left.rho * ((gamma + 1.0) * reference + (gamma - 1.0) * left.p) / 2.0);
         const double mass_right = std::sqrt(right.rho * ((gamma + 1.0) * reference + (gamma - 1.0) * right.p) / 2.0);
         result.initial_pressure = (mass_left * mass_right * (left.u - right.u)
                                    + mass_right * left.p + mass_left * right.p) / (mass_left + mass_right);
         result.guess_method = GuessMethod::TwoShocks;
     }
-    result.initial_pressure = std::max(result.initial_pressure, min_pressure);
+    if (!std::isfinite(result.initial_pressure) || result.initial_pressure <= 0.0) {
+        throw std::runtime_error("Positive star pressure is too small to represent");
+    }
     return result;
 }
 
@@ -72,7 +74,8 @@ PressureResult solve_pressure(const PrimitiveState& left, const PrimitiveState& 
                                   + wave_derivative(pressure, right, gamma);
         double next = pressure - value / derivative;
         if (!std::isfinite(next)) throw std::runtime_error("Newton iteration produced a non-finite pressure");
-        next = std::max(next, min_pressure);
+        if (next <= 0.0) next = pressure / 2.0;
+        if (next <= 0.0) throw std::runtime_error("Positive star pressure is too small to represent");
         result.iterations = i;
         if (2.0 * std::abs(next - pressure) / (next + pressure) < tolerance) {
             result.pressure = next;
