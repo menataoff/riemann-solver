@@ -3,6 +3,7 @@
 #include "export_case.hpp"
 #include "profile_export.hpp"
 #include "toro_cases.hpp"
+#include "xt_export.hpp"
 
 #include <exception>
 #include <filesystem>
@@ -19,6 +20,7 @@ int main(int argc, char* argv[]) {
             const auto directory = root / ("toro_" + std::to_string(test.number));
             write_case_metadata(directory, config, *result.solution);
             write_profile_csv(directory, config, *result.solution, 1001);
+            write_xt_density_csv(directory, config, *result.solution, 401, 201);
             std::cout << "Exported Toro " << test.number << " to " << directory << '\n';
         }
         return 0;
