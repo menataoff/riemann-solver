@@ -3,6 +3,7 @@
 #include "pressure_solver.hpp"
 #include "star_state.hpp"
 #include "wave_speeds.hpp"
+#include "sample_solution.hpp"
 
 #include <exception>
 #include <iostream>
@@ -38,6 +39,11 @@ int main(int argc, char* argv[]) {
         };
         print_wave("left", waves.left);
         print_wave("right", waves.right);
+        const double s = (config.sample_x - config.discontinuity) / config.sample_time;
+        const PrimitiveState sample = sample_solution(s, config.left, config.right,
+                                                      config.gamma, star, waves);
+        out << "sample at S=" << s << ": rho=" << sample.rho << ", u=" << sample.u
+            << ", p=" << sample.p << '\n';
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
