@@ -7,13 +7,15 @@ flowchart TD
     MAIN[main.cpp] --> CONFIG[config.cpp]
     TESTS[toro_tests.cpp] --> CONFIG
     EXPORT[export_toro.cpp] --> CONFIG
-    CONFIG --> YAML[config.yaml и examples/toro_*.yaml]
+    CUSTOM[tools/export_case.cpp] --> CONFIG
+    CONFIG --> YAML[config.yaml, examples/toro_*.yaml и свой YAML]
     TESTS --> CASES[toro_cases.cpp: эталоны и пути]
     EXPORT --> CASES
 
     MAIN --> SOLVE[exact_riemann_solver.cpp]
     TESTS --> SOLVE
     EXPORT --> SOLVE
+    CUSTOM --> SOLVE
     MAIN --> OUT[output.cpp]
     MAIN --> FACTORY[solver_factory.cpp]
     FACTORY --> ADAPTER[exact_flux_solver.cpp]
@@ -35,16 +37,22 @@ flowchart TD
     EXPORT --> PROFILE[profile_export.cpp: profile.csv]
     EXPORT --> XT[xt_export.cpp: xt_density.csv]
     EXPORT --> PU[pu_export.cpp: pu_curves.csv]
+    CUSTOM --> META
+    CUSTOM --> PROFILE
+    CUSTOM --> XT
+    CUSTOM --> PU
     PROFILE --> SAMPLE
     XT --> SAMPLE
     PU --> FUNCTION
 
-    META --> CSV[output/cases/*/*.csv]
+    META --> CSV[каталог CSV: output/cases/* или свой путь]
     PROFILE --> CSV
     XT --> CSV
     PU --> CSV
     PLOTS[plot_profiles.py / plot_xt.py / plot_pu.py] --> CSV
-    PLOTS --> PNG[docs/figures/*.png]
+    ALL[plot_all.py] --> PLOTS
+    ONE[plot_case.py] --> PLOTS
+    PLOTS --> PNG[каталог PNG: docs/figures или свой путь]
 ```
 
 ## Зачем нужны отдельные модули
@@ -64,5 +72,6 @@ flowchart TD
 | `toro_cases`, `toro_tests` | Хранят эталоны из PDF и проверяют пять задач. | Начальные состояния остаются в YAML, эталоны отделены от расчётного кода. |
 | `profile_export`, `xt_export`, `pu_export`, `export_case` | Записывают числовые CSV и метаданные. | Пользуются решением, но не рисуют. Каждый вид данных имеет свой `.hpp` и `.cpp`. |
 | `plot_*.py` | Строят PNG из CSV. | Не вызывают численный решатель. Графики можно перестроить без повторного расчёта, если данные уже сохранены. |
+| `tools/export_case.cpp`, `scripts/plot_case.py` | Управляют экспортом и отрисовкой произвольной задачи из своего YAML. | Переиспользуют те же функции записи CSV и построения PNG, что и пять тестов Торо. |
 
 Все функции расчётной библиотеки получают параметры явно и не имеют общего изменяемого состояния. Это позволяет позже вычислять потоки на разных гранях независимо. Сетку, фиктивные ячейки, граничные условия, шаг по CFL и обмен между MPI-процессами можно добавить над интерфейсом `RiemannFluxSolver`, не переписывая формулы точного решателя. Конкретная архитектура полного комплекса и распределение работы группы относятся к части 2 задания.

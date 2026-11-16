@@ -18,6 +18,111 @@ cmake --build build
 
 `output.destination: console` отправляет диагностический результат в терминал. При `output.destination: file` результат записывается в `output.file`; его родительский каталог создаётся автоматически, файл при новом запуске перезаписывается. Ошибки всегда видны в терминале. Расчётная библиотека ничего не печатает: выбор места вывода делает только `main.cpp`.
 
+## Своя задача: от входных данных до рисунков
+
+Все команды ниже выполняются **из корня репозитория**. Пути в YAML и аргументах программ, если они относительные, отсчитываются от текущего рабочего каталога. Для новой задачи достаточно собственного YAML: менять C++ код не нужно.
+
+### 1. Подготовить входной файл
+
+Скопируйте рабочий пример, чтобы сохранить все обязательные поля:
+
+```bash
+cp config.yaml examples/my_case.yaml
+```
+
+Откройте `examples/my_case.yaml` в редакторе и задайте:
+
+- `gas.gamma` — показатель адиабаты, число строго больше 1;
+- `initial.left` и `initial.right` — плотность `rho`, скорость `u`, давление `p` до расчёта по обе стороны от разрыва; `rho` и `p` положительны, `u` может быть отрицательной;
+- `domain.x_min`, `domain.x_max`, `domain.discontinuity` — отрезок отображения и положение исходного разрыва внутри него;
+- `output.sample_time` — положительный момент, для которого нужны профили; `output.sample_x` — точка внутри отрезка для диагностического вывода;
+- `boundary.left` и `boundary.right` — тип граничного условия (`transmissive` или `fixed`). Эти значения проверяются, но в точном решении одного разрыва пока не участвуют: сеточная схема ещё не реализована.
+
+Например, для новой задачи можно изменить только состояния, момент и точку разрыва, оставив остальные поля из копии. Для `fixed` дополнительно нужны `rho`, `u`, `p` прямо в соответствующем блоке `boundary`; пример приведён ниже. Подробности, ограничения и все допустимые значения — в [описании конфигурации](docs/01_config.md).
+
+### 2. Собрать и получить численный результат
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/prac15 examples/my_case.yaml
+```
+
+`prac15` читает YAML, находит параметры между волнами, типы и скорости волн, состояние в `output.sample_x` в момент `output.sample_time` и поток через неподвижную грань разрыва. Если `output.destination: console`, текст виден в терминале. Чтобы сохранять его в файл, в своей копии YAML задайте:
+
+```yaml
+output:
+  destination: file
+  file: output/my_case/run.log
+  sample_x: 0.5
+  sample_time: 0.25
+```
+
+Числа `sample_x` и `sample_time` здесь лишь пример: подставьте координату и время своей задачи. Файл `output/my_case/run.log` создаётся при запуске `prac15`; при следующем запуске по тому же пути он перезаписывается. `output.file` управляет **только текстовой диагностикой**. CSV и рисунки сохраняются отдельными командами ниже.
+
+### 3. Сохранить данные для графиков
+
+```bash
+./build/export_case examples/my_case.yaml output/my_case
+```
+
+Второй аргумент задаёт каталог для CSV; его можно заменить, например, на `results/experiment_01`. Если его опустить, используется `output/custom`. Каталог создаётся автоматически. При повторном запуске четыре файла с теми же именами перезаписываются, поэтому для разных опытов удобно выбирать разные каталоги. Экспорт использует тот же YAML и тот же точный решатель, что и `prac15`.
+
+| Файл | Что внутри |
+| --- | --- |
+| `metadata.csv` | `gamma`, отрезок, время, начальные состояния, параметры между волнами, типы и скорости волн |
+| `profile.csv` | 1001 точка по `x` в `output.sample_time`: `rho`, `u`, `p`, удельная внутренняя энергия `e`, скорость звука `a`, функция энтропии `s = p/rho^gamma` |
+| `xt_density.csv` | плотность `rho` на сетке 401 точка по `x` × 201 момент от `t=0` до `output.sample_time` |
+| `pu_curves.csv` | 1001 значение давления `p` и соответствующие левая и правая волновые кривые `u_left`, `u_right` |
+
+`domain.x_min/x_max` и `output.sample_time` задают диапазоны CSV. Для решения одного разрыва эти данные получаются отбором точного самоподобного решения; `xt_density.csv` не является результатом сеточного метода. При обнаружении вакуума `export_case` сообщает об этом, завершает работу с кодом `2` и не создаёт новые CSV: решение с вакуумом не реализовано. Если в выбранном каталоге остались файлы от более раннего запуска, они не удаляются; перед использованием проверьте результат команды.
+
+### 4. Построить рисунки
+
+Один раз подготовьте Python-окружение:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+После экспорта:
+
+```bash
+.venv/bin/python scripts/plot_case.py output/my_case --figure-dir output/figures --name my_case
+```
+
+В `output/figures/` появятся `my_case_profiles.png` (шесть профилей и положения волн), `my_case_xt.png` (плотность на плоскости `x–t`) и `my_case_pu.png` (волновые кривые и точка `(u*, p*)`). Первый аргумент должен указывать именно на каталог с четырьмя CSV. `--figure-dir` задаёт место для PNG; по умолчанию это `output/figures`. `--name` задаёт префикс имён файлов и подпись на рисунках; по умолчанию берётся имя каталога CSV. В имени разрешены латинские буквы, цифры, `_` и `-`. При повторном построении PNG с теми же именами перезаписываются.
+
+Масштаб давления на диаграмме `p–u` выбирается автоматически. Его можно задать явно через `--pressure-scale linear` или `--pressure-scale log`. Например:
+
+```bash
+.venv/bin/python scripts/plot_case.py results/experiment_01 \
+  --figure-dir results/figures --name experiment_01 --pressure-scale log
+```
+
+Полученные CSV можно читать и другими средствами, например `pandas` или табличным редактором. Python здесь нужен только для визуализации; расчёт и запись CSV выполняет C++.
+
+### Самый короткий повторный запуск
+
+После однократной сборки и установки Python-зависимостей для следующего варианта входных данных нужны три команды:
+
+```bash
+./build/prac15 examples/my_case.yaml
+./build/export_case examples/my_case.yaml output/my_case
+.venv/bin/python scripts/plot_case.py output/my_case --name my_case
+```
+
+Сохраняйте отдельные копии YAML и отдельные каталоги для сравнения вариантов. Если изменён только YAML, пересобирать программу не требуется. Если изменён C++ код или `CMakeLists.txt`, выполните `cmake --build build`; после добавления новой цели в CMake сначала повторите `cmake -S . -B build`.
+
+### Если запуск завершился ошибкой
+
+- `Cannot open ...` при чтении YAML: проверьте путь к файлу и запускайте команды из корня проекта. Относительные пути считаются от текущего каталога, а не от каталога исполняемого файла.
+- Ошибка разбора YAML: сравните свою копию с `config.yaml`; парсер принимает вложенные поля с отступами по два пробела, скалярные значения и комментарии `#`, но не списки, кавычки и YAML-ссылки.
+- `ModuleNotFoundError` у Python: создайте `.venv` и установите зависимости командами из шага 4; для построения используйте `.venv/bin/python`.
+- Нет CSV после `export_case`: прочитайте сообщение в терминале. При вакууме экспорт не выполняется; при ошибке входных данных программа возвращает код `1`.
+- PNG показывают старые данные: сначала повторите `export_case` с нужным YAML и каталогом, затем `plot_case.py` с тем же каталогом CSV. Скрипт построения не пересчитывает решение.
+
 ## Пять тестов и все графики
 
 Для автоматической проверки всех пяти тестов после сборки нужна одна команда:
@@ -172,6 +277,81 @@ flux: mass=0.395391, momentum=0.669837, energy=1.15404
 
 Таблица задания даёт (p_*=0{,}30313), (u_*=0{,}92745), (\rho_{*L}=0{,}42632), (\rho_{*R}=0{,}26557). Значения совпадают в пределах округления. Все пять тестов автоматически проверяются через CTest; подробнее — в таблицах `docs/toro_results.md`.
 
+## Свой расчётный `main.cpp` или отдельная программа
+
+Если меняются только начальные данные, используйте собственный YAML и готовые `prac15`/`export_case` из раздела выше. Редактировать `main.cpp` имеет смысл, когда нужно вывести другие величины, выбрать несколько лучей `S`, поменять частоту точек в CSV или встроить решатель в другую программу.
+
+Текущий [`main.cpp`](main.cpp) показывает стандартный порядок вызовов: `load_config` → `solve_riemann` → проверка `vacuum.occurs` → `sample_solution` и `calculate_face_flux` → диагностический вывод. Вы можете изменить его и после сборки запускать тот же `./build/prac15 examples/my_case.yaml`. Для независимых экспериментов удобнее создать, например, `tools/my_case.cpp`. Полный минимальный пример:
+
+```cpp
+#include "config.hpp"
+#include "exact_riemann_solver.hpp"
+#include "face_flux.hpp"
+#include "profile_export.hpp"
+#include "sample_solution.hpp"
+
+#include <exception>
+#include <filesystem>
+#include <iostream>
+
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: my_case CONFIG.yaml OUTPUT_DIRECTORY\n";
+        return 1;
+    }
+
+    try {
+        const Config config = load_config(argv[1]);
+        const RiemannResult result = solve_riemann(config.left, config.right,
+                                                   config.gamma);
+        if (result.vacuum.occurs) {
+            std::cerr << "Vacuum occurs; solution is not available\n";
+            return 2;
+        }
+
+        const RiemannSolution& solution = *result.solution;
+        const double ray = (config.sample_x - config.discontinuity)
+                           / config.sample_time;
+        const PrimitiveState state = sample_solution(ray, config.left, config.right,
+                                                     config.gamma, solution.star,
+                                                     solution.waves);
+        const FaceResult face = calculate_face_flux(config.left, config.right,
+                                                    config.gamma, solution.star,
+                                                    solution.waves);
+        std::cout << "rho=" << state.rho << ", u=" << state.u
+                  << ", p=" << state.p << '\n';
+        std::cout << "mass flux=" << face.flux.mass << '\n';
+
+        const std::filesystem::path directory = argv[2];
+        write_profile_csv(directory, config, solution, 1001);
+        std::cout << "Saved " << directory / "profile.csv" << '\n';
+        return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    }
+}
+```
+
+Добавьте в конец `CMakeLists.txt` две строки:
+
+```cmake
+add_executable(my_case tools/my_case.cpp)
+target_link_libraries(my_case PRIVATE prac15_export)
+```
+
+Затем создайте файл `tools/my_case.cpp` с кодом выше и выполните:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target my_case
+./build/my_case examples/my_case.yaml output/my_program
+```
+
+Здесь `prac15_export` подтягивает нужные заголовки и расчётные библиотеки. Пример пишет только `profile.csv`; для трёх рисунков скрипту `plot_case.py` нужны ещё `metadata.csv`, `xt_density.csv` и `pu_curves.csv`. Добавьте в свою программу вызовы `write_case_metadata(directory, config, solution)`, `write_xt_density_csv(directory, config, solution, 401, 201)` и `write_pu_curves_csv(directory, config, solution, 1001)` с соответствующими заголовками из `include/` либо используйте готовый `export_case`. Функция `write_profile_csv` требует не менее 1000 точек; остальные размеры должны быть не меньше двух.
+
+Если собственная программа читает YAML через `load_config`, правила валидации остаются теми же. Если задать `PrimitiveState` прямо в C++ и вызвать `solve_riemann` без конфигурации, проверяйте физическую допустимость входных состояний перед расчётом. Функции решателя принимают состояния и `gamma` как аргументы и не открывают файлы; место сохранения определяет вызывающий код.
+
 ## Структура и использование библиотеки
 
 ```text
@@ -200,7 +380,9 @@ config.yaml                пример входного файла
 examples/toro_1.yaml ...    пять конфигураций из задания
 tests/toro_tests.cpp        автоматическая проверка пяти тестов
 tools/export_toro.cpp       запись CSV для пяти тестов
+tools/export_case.cpp       запись CSV для произвольного YAML
 scripts/plot_all.py         построение всех рисунков из CSV
+scripts/plot_case.py        построение трёх рисунков из CSV своего случая
 scripts/plot_*.py           отдельные виды графиков
 requirements.txt           зависимости только для Python-постобработки
 docs/01_config.md          пояснение входных условий
@@ -241,5 +423,5 @@ if (!result.vacuum.occurs) {
 
 - Решение с вакуумом не строится, поскольку задание требует только обнаружить его.
 - Граничные условия из `config.yaml` пока проверяются и сохраняются, но не применяются: схема на сетке ещё не реализована.
-- Основная программа выводит один выбранный луч и поток при (S=0). Для пяти тестов отдельный `export_toro` создаёт профили и данные диаграмм, а Python строит графики.
+- Основная программа выводит один выбранный луч и поток при (S=0). Для пяти тестов `export_toro`, а для произвольного YAML `export_case` создают профили и данные диаграмм; Python строит графики.
 - Итоговый PDF-отчёт и полный проект комплекса по вопросам 2.1–2.10 относятся к части 2 задания и ещё не подготовлены.
