@@ -22,9 +22,10 @@ double relative_error(double value, double reference) {
 }
 
 bool matches(double value, double reference) {
-    return std::isfinite(value)
-           && (std::abs(value - reference) <= absolute_tolerance
-               || relative_error(value, reference) <= relative_tolerance);
+    if (!std::isfinite(value)) return false;
+    if (reference == 0.0) return std::abs(value) <= absolute_tolerance;
+    return std::abs(value - reference) <= absolute_tolerance
+           || relative_error(value, reference) <= relative_tolerance;
 }
 
 void write_value(std::ostream& out, const char* name, double value, double reference) {
@@ -112,6 +113,11 @@ bool run_case(const ToroCase& test, std::ostream* report) {
 
 int main(int argc, char* argv[]) {
     try {
+        if (matches(1.0, 0.0) || !matches(0.0, 0.0)
+            || !matches(absolute_tolerance, 0.0)) {
+            std::cerr << "Error: zero reference comparison is incorrect\n";
+            return 1;
+        }
         std::ofstream report_file;
         if (argc > 1) {
             const std::filesystem::path path(argv[1]);
